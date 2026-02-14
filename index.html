@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>אלידוס - גרסה 6.2</title>
+    <link rel="icon" href="fire-icon.svg" type="image/png">
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --board-red: #d32f2f;
+            --board-dark-red: #b71c1c;
+            --step-bg: #ffffff;
+            --font-main: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            --btn-blue: #1976d2;
+        }
+
+        * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            margin: 0; padding: 0;
+            background-color: var(--bg-color);
+            font-family: var(--font-main);
+            height: 100vh; width: 100vw;
+            overflow: hidden;
+            display: flex; flex-direction: column;
+        }
+
+        /* ══════════════════════════════════════════
+           מסך פתיחה
+        ══════════════════════════════════════════ */
+        #setup-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.98);
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 2000; transition: opacity 0.4s;
+        }
+        .setup-card {
+            background: white; padding: 2rem 2.5rem;
+            border-radius: 25px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            text-align: center; width: 90%; max-width: 420px;
+            border: 1px solid #eee;
+        }
+        .setup-card h1 { color: var(--board-red); margin: 0 0 4px; font-size: 2.4rem; }
+        .setup-card .subtitle { color: #888; font-size: 0.9rem; margin-bottom: 18px; }
+
+        /* --- Toggle מצב --- */
+        .mode-toggle {
+            display: flex; background: #f0f0f0; border-radius: 50px;
+            padding: 4px; margin-bottom: 20px; gap: 2px;
+        }
+        .mode-toggle button {
+            flex: 1; padding: 9px 0; font-size: 1rem; font-weight: 600;
+            border: none; border-radius: 50px; cursor: pointer;
+            background: transparent; color: #888;
+            transition: all 0.25s;
+        }
+        .mode-toggle button.active {
+            background: var(--board-red); color: white;
+            box-shadow: 0 3px 10px rgba(211,47,47,0.35);
+        }
+
+        /* --- תפריט לוח --- */
+        #board-setup { display: block; }
+        /* --- תפריט שחקן --- */
+        #player-setup { display: none; }
+
+        .setup-label {
+            display: block; text-align: right;
+            margin-bottom: 6px; color: #444; font-size: 0.95rem;
+            font-weight: 600;
+        }
+        select {
+            padding: 12px; font-size: 1.1rem; width: 100%;
+            border-radius: 12px; border: 1px solid #ccc; background: #fafafa;
+            margin-bottom: 10px;
+        }
+
+        /* --- רשימת מאגרים --- */
+        .pack-list {
+            display: flex; flex-direction: column; gap: 8px;
+            margin-bottom: 12px;
+            max-height: 240px; overflow-y: auto;
+            padding-right: 4px; padding-left: 2px;
+            scroll-behavior: smooth;
+            scrollbar-width: thin;
+            scrollbar-color: #d32f2f #f0f0f0;
+        }
+        .pack-list::-webkit-scrollbar { width: 6px; }
+        .pack-list::-webkit-scrollbar-track { background: #f0f0f0; border-radius: 3px; }
+        .pack-list::-webkit-scrollbar-thumb { background: #d32f2f; border-radius: 3px; }
+        .pack-item {
+            display: flex; align-items: center; gap: 10px;
+            background: #fafafa; border: 1.5px solid #e0e0e0;
+            border-radius: 12px; padding: 10px 14px; cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            text-align: right;
+        }
+        .pack-item.selected {
+            border-color: var(--board-red);
+            background: #fff5f5;
+        }
+        .pack-item input[type="checkbox"] {
+            accent-color: var(--board-red);
+            width: 18px; height: 18px; cursor: pointer; flex-shrink: 0;
+            margin: 0;
+        }
+        .pack-item span { flex: 1; font-size: 1rem; color: #333; }
+        .loading-packs { color: #aaa; font-size: 0.9rem; text-align: center; padding: 12px 0; }
+
+        .upload-btn {
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            width: 100%; padding: 10px; font-size: 0.95rem;
+            background: white; color: #555; border: 2px dashed #ccc;
+            border-radius: 12px; cursor: pointer; margin-bottom: 10px;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .upload-btn:hover { border-color: #999; background: #fafafa; }
+        .upload-status {
+            font-size: 0.85rem; color: #2e7d32; min-height: 1.2em;
+            margin-bottom: 6px;
+        }
+        #file-upload-input { display: none; }
+
+        /* --- כפתורים --- */
+        .btn-start {
+            background: var(--board-red); color: white; border: none;
+            padding: 12px 40px; font-size: 1.3rem; border-radius: 50px;
+            cursor: pointer; box-shadow: 0 5px 15px rgba(211,47,47,0.3);
+            transition: transform 0.2s, opacity 0.2s;
+            margin-top: 10px; width: 100%;
+        }
+        .btn-start:active { transform: scale(0.95); }
+        .btn-start:disabled { opacity: 0.4; cursor: default; }
+
+        .btn-secondary {
+            background: white; color: #555; border: 2px solid #ddd;
+            padding: 10px 30px; font-size: 1.1rem; border-radius: 50px;
+            cursor: pointer; margin-top: 10px; width: 100%;
+            transition: background 0.2s;
+        }
+        .btn-secondary:hover { background: #f9f9f9; color: black; border-color: #ccc; }
+
+        /* ══════════════════════════════════════════
+           מסך לוח
+        ══════════════════════════════════════════ */
+        #game-layout { display: none; flex-direction: column; height: 100%; width: 100%; }
+
+        header {
+            height: 60px; background: white;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); z-index: 100;
+            flex-shrink: 0;
+        }
+        .header-group { display: flex; align-items: center; gap: 8px; }
+        .turn-display {
+            font-weight: bold; color: #333;
+            display: flex; align-items: center; gap: 8px;
+            background: #f5f5f5; padding: 5px 15px; border-radius: 20px;
+            font-size: 0.95rem;
+        }
+        .turn-dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1); }
+        .btn-icon {
+            background: none; border: 1px solid #ddd;
+            border-radius: 50%; width: 38px; height: 38px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 1.2rem; color: #555;
+            transition: background 0.2s;
+        }
+        .btn-icon:hover { background: #f0f0f0; color: #000; }
+
+        .timer-container {
+            display: flex; align-items: center; gap: 5px; cursor: pointer;
+            padding: 5px 10px; border-radius: 10px; transition: background 0.2s;
+        }
+        .timer-container:active { background: #eee; }
+        .spinning { animation: spin 2s infinite linear; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* לוח */
+        #board-container {
+            flex: 1; position: relative;
+            background-color: var(--board-red);
+            overflow: hidden;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #board {
+            position: relative;
+            width: 95vw; height: 85vh;
+            background: radial-gradient(circle at center, #ef5350 0%, #b71c1c 100%);
+            border-radius: 40px;
+            box-shadow: inset 0 0 80px rgba(0,0,0,0.4);
+        }
+        .center-image {
+            position: absolute; top: 50%; left: 55%;
+            transform: translate(-50%, -50%);
+            width: 28%; height: 25%;
+            display: flex; align-items: center; justify-content: center;
+            pointer-events: none; z-index: 1;
+        }
+        .center-image img { max-width: 100%; max-height: 100%; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3)); }
+        .fallback-text {
+            font-family: 'Arial Black', sans-serif; font-size: 5vh;
+            color: rgba(255,255,255,0.15); letter-spacing: 5px;
+        }
+        .step {
+            position: absolute;
+            width: 9vh; height: 9vh;
+            background: var(--step-bg);
+            border-radius: 50%;
+            display: flex; justify-content: center; align-items: center;
+            font-weight: 800; color: #444; font-size: 2.5vh;
+            box-shadow: 0 0.6vh 0 #ccc, 0 1vh 2vh rgba(0,0,0,0.3);
+            cursor: pointer; z-index: 10;
+            transform: translate(-50%, -50%);
+            transition: transform 0.1s;
+        }
+        .step:active { transform: translate(-50%, -45%); box-shadow: 0 0.3vh 0 #ccc; }
+        .step-red {
+            background: #ff5252; color: white; border: 0.3vh solid white;
+            box-shadow: 0 0.6vh 0 #b71c1c, 0 1vh 2vh rgba(0,0,0,0.3);
+        }
+        .step-start, .step-end {
+            width: 10vh; height: 10vh;
+            font-size: 0; z-index: 15;
+            background: white;
+            border: 0.5vh solid #ffd700;
+        }
+        .step-start svg, .step-end svg { width: 50%; height: 50%; fill: #fbc02d; }
+        .step-end { border-color: #333; }
+        .step-end svg { fill: #333; }
+        .player-token {
+            position: absolute;
+            width: 4.5vh; height: 4.5vh;
+            border-radius: 50%; z-index: 50;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.5);
+            border: 0.3vh solid white;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+        }
+        .p-0 { background: radial-gradient(circle at 30% 30%, #fff59d, #fbc02d); }
+        .p-1 { background: radial-gradient(circle at 30% 30%, #90caf9, #1565c0); }
+        .p-2 { background: radial-gradient(circle at 30% 30%, #fafafa, #9e9e9e); }
+        .p-3 { background: radial-gradient(circle at 30% 30%, #a5d6a7, #2e7d32); }
+        .p-4 { background: radial-gradient(circle at 30% 30%, #ef9a9a, #c62828); }
+        .p-5 { background: radial-gradient(circle at 30% 30%, #bdbdbd, #212121); }
+
+        @media (max-aspect-ratio: 1/1) {
+            #board { width: 95vw; height: auto; aspect-ratio: 1/1; }
+            .step { width: 11vw; height: 11vw; font-size: 4vw; box-shadow: 0 1vw 0 #ccc; }
+            .step:active { transform: translate(-50%, -45%); box-shadow: 0 0.5vw 0 #ccc; }
+            .step-start, .step-end { width: 14vw; height: 14vw; }
+            .player-token { width: 7vw; height: 7vw; border-width: 0.5vw; }
+            .center-image { width: 32%; }
+            .fallback-text { font-size: 8vw; }
+        }
+
+        /* ══════════════════════════════════════════
+           מסך שחקן
+        ══════════════════════════════════════════ */
+        #player-screen {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, #ef5350 0%, #b71c1c 100%);
+            z-index: 1500;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* כפתור חזרה */
+        .player-back-btn {
+            position: absolute; top: 18px; right: 18px;
+            background: rgba(255,255,255,0.2); border: none;
+            width: 42px; height: 42px; border-radius: 50%;
+            font-size: 1.3rem; color: white; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+        }
+        .player-back-btn:hover { background: rgba(255,255,255,0.35); }
+
+        /* counter */
+        .card-counter {
+            position: absolute; top: 22px; left: 18px;
+            color: rgba(255,255,255,0.75); font-size: 0.9rem; font-weight: 600;
+        }
+
+        /* ערימת קלפים */
+        .deck-area {
+            position: relative;
+            width: min(340px, 88vw);
+            height: min(420px, 72vh);
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* קלפים בתפאורה */
+        .deck-ghost {
+            position: absolute;
+            width: 100%; height: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        }
+        .deck-ghost:nth-child(1) { transform: rotate(-4deg) translateY(8px); opacity: 0.5; }
+        .deck-ghost:nth-child(2) { transform: rotate(2.5deg) translateY(4px); opacity: 0.7; }
+        .deck-ghost:nth-child(3) { transform: rotate(-1deg) translateY(1px); opacity: 0.9; }
+
+        /* --- כרטיס עם flip --- */
+        .card-3d-wrapper {
+            position: absolute;
+            width: 100%; height: 100%;
+            perspective: 900px;
+            z-index: 10;
+        }
+        .card-inner {
+            width: 100%; height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+        .card-inner.flipped { transform: rotateY(180deg); }
+
+        .card-face, .card-back {
+            position: absolute; inset: 0;
+            border-radius: 20px;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.35);
+        }
+
+        /* --- גב הקלף --- */
+        .card-back {
+            background: var(--board-red);
+            display: flex; align-items: center; justify-content: center;
+            border: 4px solid rgba(255,255,255,0.25);
+            overflow: hidden;
+        }
+        .card-back-inner {
+            text-align: center; color: rgba(255,255,255,0.9);
+        }
+        .card-back-logo {
+            font-size: 3.5rem; font-weight: 900; letter-spacing: 6px;
+            text-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            font-family: 'Arial Black', sans-serif;
+        }
+        .card-back-pattern {
+            width: 100%; height: 100%; position: absolute;
+            top: 0; left: 0;
+            background-image: repeating-linear-gradient(
+                45deg,
+                rgba(255,255,255,0.04) 0px,
+                rgba(255,255,255,0.04) 2px,
+                transparent 2px,
+                transparent 12px
+            );
+            pointer-events: none;
+        }
+
+        /* --- פנים הקלף --- */
+        .card-face {
+            background: #fff;
+            transform: rotateY(180deg);
+            display: flex; flex-direction: column;
+            overflow: hidden;
+        }
+        .card-header {
+            background: var(--board-red);
+            color: white;
+            padding: 10px 16px;
+            display: flex; justify-content: space-between; align-items: center;
+            flex-shrink: 0;
+        }
+        .card-header-title {
+            font-size: 1.3rem; font-weight: 900; letter-spacing: 4px;
+            font-family: 'Arial Black', sans-serif;
+        }
+        .card-header-num {
+            font-size: 0.85rem; opacity: 0.85; font-weight: 600;
+        }
+        .card-concepts {
+            flex: 1;
+            display: flex; flex-direction: column;
+            padding: 6px 0;
+        }
+        .concept-row {
+            flex: 1;
+            display: flex; align-items: center;
+            padding: 0 16px;
+            border-bottom: 1px solid #f0f0f0;
+            gap: 12px;
+            direction: rtl;
+        }
+        .concept-row:last-child { border-bottom: none; }
+        .concept-row:nth-child(odd) { background: #fafafa; }
+        .concept-num {
+            font-size: 0.75rem; font-weight: 800;
+            color: var(--board-red);
+            width: 18px; text-align: center; flex-shrink: 0;
+        }
+        .concept-text {
+            font-size: clamp(0.95rem, 3.5vw, 1.2rem);
+            font-weight: 600; color: #222;
+        }
+
+        /* הוראה תחתית */
+        .player-hint {
+            color: rgba(255,255,255,0.7); font-size: 0.9rem;
+            margin-top: 18px; text-align: center;
+        }
+
+        /* כפתור התחלה */
+        .btn-flip-start {
+            margin-top: 22px;
+            background: white; color: var(--board-red);
+            border: none; border-radius: 50px;
+            padding: 14px 44px; font-size: 1.2rem; font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn-flip-start:active { transform: scale(0.95); box-shadow: 0 3px 10px rgba(0,0,0,0.2); }
+
+        /* ══════════════════════════════════════════
+           מודאלים
+        ══════════════════════════════════════════ */
+        .modal-overlay {
+            display: none; position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(3px);
+            z-index: 3000;
+            justify-content: center; align-items: center;
+        }
+        .modal-card {
+            background: white; padding: 30px; border-radius: 20px;
+            text-align: center; width: 90%; max-width: 500px;
+            animation: popIn 0.3s ease-out; position: relative;
+        }
+        .close-btn {
+            position: absolute; top: 15px; left: 15px;
+            background: #eee; border: none; width: 30px; height: 30px;
+            border-radius: 50%; cursor: pointer; font-weight: bold;
+        }
+        .instruction-list { text-align: right; padding-right: 20px; line-height: 1.6; color: #444; }
+        .instruction-list li { margin-bottom: 8px; }
+
+        /* ══════════════════════════════════════════
+           התראת סיום טיימר
+        ══════════════════════════════════════════ */
+        #timer-alert {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(183,28,28,0.93);
+            z-index: 5000;
+            justify-content: center; align-items: center;
+            cursor: pointer;
+            animation: alertFadeIn 0.35s ease-out;
+        }
+        @keyframes alertFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .timer-alert-emoji {
+            font-size: 5rem; display: block; margin-bottom: 15px;
+            animation: bigBounce 0.6s ease-out;
+        }
+        @keyframes bigBounce {
+            0%  { transform: scale(0) rotate(-15deg); opacity: 0; }
+            60% { transform: scale(1.3) rotate(5deg); opacity: 1; }
+            80% { transform: scale(0.9) rotate(-3deg); }
+            100%{ transform: scale(1) rotate(0deg); }
+        }
+        .timer-alert-text {
+            font-size: 2.8rem; font-weight: 900; letter-spacing: 2px;
+            color: white; text-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            animation: shakeText 0.6s ease-out 0.2s both;
+        }
+        @keyframes shakeText {
+            0%,100%{ transform: translateX(0); }
+            15%    { transform: translateX(-12px); }
+            30%    { transform: translateX(12px); }
+            45%    { transform: translateX(-8px); }
+            60%    { transform: translateX(8px); }
+            75%    { transform: translateX(-4px); }
+            88%    { transform: translateX(4px); }
+        }
+        .timer-alert-sub {
+            font-size: 1rem; margin-top: 15px; color: rgba(255,255,255,0.8);
+            animation: fadeUp 0.4s ease-out 0.5s both;
+        }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:0.8; transform:translateY(0); } }
+
+        /* ══════════════════════════════════════════
+           Toast
+        ══════════════════════════════════════════ */
+        #toast {
+            position: fixed; top: 75px; left: 50%;
+            transform: translateX(-50%) translateY(-8px);
+            background: rgba(50,50,50,0.92); color: white;
+            padding: 10px 24px; border-radius: 24px;
+            font-size: 0.95rem; opacity: 0;
+            transition: opacity 0.25s, transform 0.25s;
+            z-index: 4000; pointer-events: none;
+            white-space: nowrap; box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+        }
+        #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* ── אנימציות כלליות ── */
+        @keyframes popIn { from { transform:scale(0.8); opacity:0; } to { transform:scale(1); opacity:1; } }
+        @keyframes bounce {
+            0%,100% { transform: translateY(0); }
+            40%     { transform: translateY(-18px); }
+            70%     { transform: translateY(-8px); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     מסך פתיחה
+══════════════════════════════════════════════ -->
+<div id="setup-screen">
+    <div class="setup-card">
+        <h1>ALIDOS</h1>
+        <p class="subtitle">משחק הלוח הדיגיטלי</p>
+
+        <!-- Toggle מצב -->
+        <div class="mode-toggle">
+            <button id="btn-mode-board" class="active" onclick="setMode('board')">🎲 לוח</button>
+            <button id="btn-mode-player" onclick="setMode('player')">🃏 שחקן</button>
+        </div>
+
+        <!-- ─── תפריט לוח ─── -->
+        <div id="board-setup">
+            <label class="setup-label">מספר קבוצות:</label>
+            <select id="player-count">
+                <option value="2">2 קבוצות</option>
+                <option value="3">3 קבוצות</option>
+                <option value="4" selected>4 קבוצות</option>
+                <option value="5">5 קבוצות</option>
+                <option value="6">6 קבוצות</option>
+            </select>
+            <button class="btn-start" onclick="startBoardGame()">התחל משחק</button>
+            <button class="btn-secondary" onclick="showInstructions()">❓ הוראות שימוש</button>
+        </div>
+
+        <!-- ─── תפריט שחקן ─── -->
+        <div id="player-setup">
+            <label class="setup-label">בחרו מאגרי מושגים:</label>
+            <div id="pack-list" class="pack-list">
+                <div class="loading-packs">טוען מאגרים...</div>
+            </div>
+
+            <!-- העלאת קובץ -->
+            <button class="upload-btn" onclick="document.getElementById('file-upload-input').click()">
+                📂 העלו קובץ JSON מהמחשב
+            </button>
+            <input type="file" id="file-upload-input" accept=".json" onchange="handleFileUpload(event)">
+            <div id="upload-status" class="upload-status"></div>
+
+            <button class="btn-start" id="btn-start-player" onclick="startPlayerGame()" disabled>
+                התחל משחק שחקן
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     מסך לוח
+══════════════════════════════════════════════ -->
+<div id="game-layout">
+    <header>
+        <div class="header-group">
+            <button class="btn-icon" onclick="backToMenu()">🏠</button>
+            <button class="btn-icon" onclick="showInstructions()">❓</button>
+            <button class="btn-icon" onclick="undoLastMove()">↩️</button>
+        </div>
+        <div class="turn-display">
+            <div id="turn-dot" class="turn-dot" style="background:gold;"></div>
+            <span id="turn-text">קבוצה 1</span>
+        </div>
+        <div class="timer-container" onclick="toggleTimer()">
+            <span id="timer-display" style="font-weight:bold;font-size:1.1rem;color:#333;">01:00</span>
+            <span id="hourglass" style="font-size:1.4rem;">⏳</span>
+        </div>
+    </header>
+
+    <div id="board-container">
+        <div id="board">
+            <div class="center-image">
+                <img src="alidos-logo.png"
+                     onerror="this.style.display='none'; document.querySelector('.fallback-text').style.display='block'">
+                <div class="fallback-text" style="display:none;">ALIDOS</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     מסך שחקן (קלפים)
+══════════════════════════════════════════════ -->
+<div id="player-screen">
+    <button class="player-back-btn" onclick="backToMenu()">🏠</button>
+    <span class="card-counter" id="card-counter"></span>
+
+    <div class="deck-area" id="deck-area">
+        <!-- ערימת קלפים תפאורתית -->
+        <div class="deck-ghost"></div>
+        <div class="deck-ghost"></div>
+        <div class="deck-ghost"></div>
+
+        <!-- קלף עם flip -->
+        <div class="card-3d-wrapper">
+            <div class="card-inner" id="card-inner">
+
+                <!-- גב הקלף -->
+                <div class="card-back">
+                    <div class="card-back-pattern"></div>
+                    <div class="card-back-inner">
+                        <div class="card-back-logo">ALIDOS</div>
+                    </div>
+                </div>
+
+                <!-- פנים הקלף -->
+                <div class="card-face">
+                    <div class="card-header">
+                        <span class="card-header-title">ALIDOS</span>
+                        <span class="card-header-num" id="card-num-display">קלף 1</span>
+                    </div>
+                    <div class="card-concepts" id="card-concepts">
+                        <!-- יאוכלס בקוד -->
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- כפתור התחלה / הוראה -->
+    <button class="btn-flip-start" id="btn-flip-start" onclick="flipCurrentCard()">
+        הפוך קלף ▶
+    </button>
+    <p class="player-hint" id="player-hint">לחצו להפוך את הקלף הראשון</p>
+</div>
+
+<!-- התראת טיימר -->
+<div id="timer-alert" onclick="dismissTimerAlert()">
+    <div style="text-align:center;">
+        <span class="timer-alert-emoji">⏰</span>
+        <div class="timer-alert-text">הזמן נגמר!</div>
+        <div class="timer-alert-sub">לחצו בכל מקום להמשך</div>
+    </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- מודאל הוראות -->
+<div id="instructions-modal" class="modal-overlay">
+    <div class="modal-card">
+        <button class="close-btn" onclick="closeInstructions()">✕</button>
+        <h2 style="color:var(--btn-blue);">איך משתמשים?</h2>
+        <ul class="instruction-list">
+            <li><strong>מצב לוח:</strong> בחרו מספר קבוצות ולחצו התחל.</li>
+            <li><strong>תזוזה:</strong> לחצו על העיגול שאליו הקבוצה מגיעה.</li>
+            <li><strong>טיימר:</strong> לחצו על שעון החול להפעלה/עצירה.</li>
+            <li><strong>ביטול:</strong> לחצו ↩️ לביטול המהלך האחרון.</li>
+            <li><strong>מצב שחקן:</strong> בחרו מאגרי מושגים, לחצו "הפוך קלף" לחשיפת 8 מושגים.</li>
+        </ul>
+        <p>פתחו מחשב כלוח ומחשב נוסף או מכשיר נייד לשחקן המגדיר, והתחילו לשחק!</p>
+        <button class="btn-start" style="padding:10px 30px;font-size:1rem;" onclick="closeInstructions()">הבנתי!</button>
+    </div>
+</div>
+
+<!-- מודאל ניצחון -->
+<div id="victory-modal" class="modal-overlay">
+    <div class="modal-card">
+        <div style="font-size:4rem;margin-bottom:10px;animation:bounce 1s infinite;">🏆</div>
+        <h2 id="winner-name" style="margin-bottom:10px;">קבוצה X ניצחה!</h2>
+        <p>כל הכבוד! סיימתם את המסלול.</p>
+        <button class="btn-start" style="padding:10px 30px;margin-top:20px;" onclick="closeVictory()">סגור והמשך</button>
+        <br>
+        <button class="btn-secondary" style="margin-top:10px;border:none;" onclick="backToMenu()">משחק חדש</button>
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     JavaScript
+══════════════════════════════════════════════ -->
+<script>
+    // ─────────────────────────────────────────────
+    // BOARD_CONFIG
+    // ─────────────────────────────────────────────
+    const BOARD_CONFIG = {
+        MARGIN: 10,
+        RING_GAP: 17,
+        NUM_RINGS: 2,
+        TOTAL_STEPS: 40,
+        RED_STEP_INTERVAL: 8,
+        END_X: 33,
+        END_Y: 50,
+    };
+
+    // ─────────────────────────────────────────────
+    // FALLBACK — מאגרי מושגים מוטמעים (כשאין שרת)
+    // ─────────────────────────────────────────────
+    const FALLBACK_PACKS = {
+        'general_he.json': ['כלב','חתול','בית','עץ','מכונית','שמש','ירח','כוכב','ים','הר','נהר','גשם','שלג','ענן','רוח','אש','מים','אדמה','פרח','פרי','ירק','לחם','חלב','ביצה','ספר','עיפרון','שולחן','כיסא','מיטה','דלת','חלון','מפתח','שעון','טלפון','מחשב','תיק','נעל','כובע','חולצה','מכנסיים','כסף','זהב','אבן','גשר','כביש','רכבת','אוטובוס','מטוס','ספינה','אופניים','מנורה','כוס','צלחת','כף','מזלג','סכין','סיר','תנור','מקרר','מראה','סבון','מגבת','רופא','מורה','שוטר','שף','זמר','שחקן','תרנגולת','פרה','סוס','כבש','עכבר','ציפור','דג','נחש','פיל','ארי','קוף','דובי','זאב','שועל','ארנב','תנין','צב','דבורה','פרפר'],
+        'sports_he.json': ['כדורגל','כדורסל','כדורעף','טניס','שחייה','אתלטיקה','התעמלות','אגרוף','רכיבה','גלישה','סקי','הוקי','ריצה','מרתון','אולימפיאדה','כדור יד','רוגבי','שוער','קפטן','שופט','פנדל','קרנר','בעיטה','זריקה','חסימה','מסירה','ניצחון','תיקו','הפסד','ליגה','גביע','אליפות','מדליה','רשת','מגרש','אצטדיון','גמר','טורניר','ספרינט','מסלול','בריכה','רמה','חגורה','ספורטאי','אימון','מאמן'],
+        'food_he.json': ['פיצה','המבורגר','סושי','פסטה','סלט','מרק','שניצל','שקשוקה','חומוס','פלאפל','שווארמה','קבב','סטייק','עוף בצלחת','דג מטוגן','גבינה צהובה','יוגורט','גלידה','עוגת שוקולד','עוגיות','לחם','פיתה','בגט','קרואסון','סביח','טאקו','וופל','פנקייק','חביתה','שוקו','קפה','תה','מיץ','שמן זית','חומץ','לימון','שום','בצל','עגבנייה','מלפפון','גזר','תפוח אדמה','בטטה','ברוקולי','תירס','אפונה','שעועית','עדשים','אורז','שוקולד','וניל','קינמון','דבש','ריבה'],
+    };
+
+    // ─────────────────────────────────────────────
+    // מצב UI
+    // ─────────────────────────────────────────────
+    let currentMode = 'board'; // 'board' | 'player'
+
+    // ─────────────────────────────────────────────
+    // מצב לוח
+    // ─────────────────────────────────────────────
+    const colors = [
+        { name: 'צהוב', hex: '#fbc02d', class: 'p-0' },
+        { name: 'כחול', hex: '#1565c0', class: 'p-1' },
+        { name: 'לבן',  hex: '#e0e0e0', class: 'p-2' },
+        { name: 'ירוק', hex: '#2e7d32', class: 'p-3' },
+        { name: 'אדום', hex: '#c62828', class: 'p-4' },
+        { name: 'שחור', hex: '#212121', class: 'p-5' },
+    ];
+    let players = [], currentPlayerIndex = 0, coords = [], historyStack = [];
+    let timerInterval, timeLeft = 60, isTimerRunning = false;
+    let toastTimeout = null;
+
+    // ─────────────────────────────────────────────
+    // מצב שחקן
+    // ─────────────────────────────────────────────
+    let availablePacks   = {};  // { filename: displayName }
+    let selectedPacks    = new Set();
+    selectedPacks.add('bava_metzia.json');
+    let uploadedConcepts = [];  // מושגים שהועלו ידנית
+
+    let conceptDeck = [];     // כל המושגים ממאגרים שנבחרו, מעורבבים
+    let deckPointer = 0;      // מצביע לאיפה אנחנו בDeک
+    let cardNumber  = 0;      // מספר קלף נוכחי (לתצוגה)
+    let cardFlipped = false;  // האם הקלף הנוכחי כבר הופנה?
+
+    // ─────────────────────────────────────────────
+    // אתחול
+    // ─────────────────────────────────────────────
+    window.addEventListener('DOMContentLoaded', loadPackList);
+
+    async function loadPackList() {
+        let packs;
+        try {
+            const res = await fetch('concept_packs.json');
+            if (!res.ok) throw new Error('not ok');
+            packs = await res.json();
+        } catch {
+            // fallback — הגדר לפי FALLBACK_PACKS
+            packs = {
+                'general_he.json': 'מילים כלליות',
+                'sports_he.json': 'ספורט',
+                'food_he.json': 'אוכל ובישול',
+            };
+        }
+        availablePacks = packs;
+        renderPackList();
+    }
+
+    function renderPackList() {
+        const container = document.getElementById('pack-list');
+        container.innerHTML = '';
+        Object.entries(availablePacks).forEach(([filename, displayName]) => {
+            const item = document.createElement('div');
+            item.className = 'pack-item' + (selectedPacks.has(filename) ? ' selected' : '');
+            item.innerHTML = `
+                <input type="checkbox" id="chk-${filename}"
+                    ${selectedPacks.has(filename) ? 'checked' : ''}
+                    onchange="togglePack('${filename}', this.checked)">
+                <label for="chk-${filename}" style="flex:1;cursor:pointer;text-align:right;">
+                    ${displayName}
+                </label>`;
+            item.onclick = (e) => {
+                if (e.target.tagName !== 'INPUT') {
+                    const chk = item.querySelector('input');
+                    chk.checked = !chk.checked;
+                    togglePack(filename, chk.checked);
+                }
+            };
+            container.appendChild(item);
+        });
+        updateStartPlayerBtn();
+    }
+
+    function togglePack(filename, checked) {
+        if (checked) selectedPacks.add(filename);
+        else selectedPacks.delete(filename);
+        // עדכן עיצוב
+        const item = document.querySelector(`#chk-${filename}`)?.closest('.pack-item');
+        if (item) item.classList.toggle('selected', checked);
+        updateStartPlayerBtn();
+    }
+
+    function updateStartPlayerBtn() {
+        const btn = document.getElementById('btn-start-player');
+        btn.disabled = selectedPacks.size === 0 && uploadedConcepts.length === 0;
+    }
+
+    function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+                if (!Array.isArray(data)) throw new Error('לא מערך');
+                uploadedConcepts = data.map(String);
+                document.getElementById('upload-status').textContent =
+                    `✓ נטען: "${file.name}" (${uploadedConcepts.length} מושגים)`;
+                updateStartPlayerBtn();
+            } catch {
+                document.getElementById('upload-status').textContent = '❌ שגיאה: קובץ לא תקין';
+            }
+        };
+        reader.readAsText(file);
+        // אפס כדי לאפשר העלאה שוב
+        event.target.value = '';
+    }
+
+    // ─────────────────────────────────────────────
+    // ניהול מצב UI
+    // ─────────────────────────────────────────────
+    function setMode(mode) {
+        currentMode = mode;
+        document.getElementById('board-setup').style.display  = mode === 'board'  ? 'block' : 'none';
+        document.getElementById('player-setup').style.display = mode === 'player' ? 'block' : 'none';
+        document.getElementById('btn-mode-board').classList.toggle('active',  mode === 'board');
+        document.getElementById('btn-mode-player').classList.toggle('active', mode === 'player');
+    }
+
+    function backToMenu() {
+        resetTimer();
+        document.getElementById('game-layout').style.display   = 'none';
+        document.getElementById('player-screen').style.display = 'none';
+        const ss = document.getElementById('setup-screen');
+        ss.style.opacity = '0';
+        ss.style.display = 'flex';
+        setTimeout(() => ss.style.opacity = '1', 10);
+        // סגור מודאלים פתוחים
+        closeVictory();
+        closeInstructions();
+    }
+
+    function showInstructions() { document.getElementById('instructions-modal').style.display = 'flex'; }
+    function closeInstructions() { document.getElementById('instructions-modal').style.display = 'none'; }
+
+    // ─────────────────────────────────────────────
+    // מצב לוח — התחלה
+    // ─────────────────────────────────────────────
+    function startBoardGame() {
+        const count = parseInt(document.getElementById('player-count').value);
+        players = [];
+        historyStack = [];
+        for (let i = 0; i < count; i++) players.push({ id: i, pos: 0 });
+        currentPlayerIndex = 0;
+
+        document.getElementById('setup-screen').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('game-layout').style.display = 'flex';
+            buildBoard();
+            renderPlayers();
+            updateUI();
+            resetTimer();
+        }, 400);
+    }
+
+    // ─────────────────────────────────────────────
+    // מצב שחקן — התחלה
+    // ─────────────────────────────────────────────
+    async function startPlayerGame() {
+        // איסוף מושגים
+        let all = [...uploadedConcepts];
+
+        for (const filename of selectedPacks) {
+            let concepts = null;
+            try {
+                const res = await fetch(filename);
+                if (!res.ok) throw new Error('not ok');
+                concepts = await res.json();
+            } catch {
+                concepts = FALLBACK_PACKS[filename] || [];
+            }
+            all = all.concat(concepts);
+        }
+
+        if (all.length < 8) {
+            showToast('❌ אין מספיק מושגים (דרוש מינימום 8)');
+            return;
+        }
+
+        // ערבוב
+        conceptDeck = shuffle([...new Set(all)]); // הסר כפילויות וערבב
+        deckPointer = 0;
+        cardNumber  = 0;
+        cardFlipped = false;
+
+        // מעבר למסך שחקן
+        document.getElementById('setup-screen').style.opacity = '0';
+        setTimeout(() => {
+            document.getElementById('setup-screen').style.display = 'none';
+            document.getElementById('player-screen').style.display = 'flex';
+            resetCard();
+        }, 400);
+    }
+
+    // ─────────────────────────────────────────────
+    // לוגיקת קלפים
+    // ─────────────────────────────────────────────
+    function resetCard() {
+        const inner = document.getElementById('card-inner');
+        inner.classList.remove('flipped');
+        cardFlipped = false;
+
+        document.getElementById('btn-flip-start').style.display = 'inline-block';
+        document.getElementById('player-hint').textContent = 'לחצו להפוך את הקלף';
+
+        // מניעת קליק על קלף לא מופנה
+        inner.style.pointerEvents = 'none';
+
+        updateCardCounter();
+    }
+
+    function flipCurrentCard() {
+        if (cardFlipped) return;
+
+        const concepts = getNextConcepts(8);
+        cardNumber++;
+        populateCardFace(concepts, cardNumber);
+        updateCardCounter();
+
+        const inner = document.getElementById('card-inner');
+        inner.style.pointerEvents = 'auto';
+        requestAnimationFrame(() => inner.classList.add('flipped'));
+        cardFlipped = true;
+
+        document.getElementById('btn-flip-start').style.display = 'none';
+        document.getElementById('player-hint').textContent = 'לחצו על הקלף לקלף הבא';
+
+        inner.onclick = advanceCard;
+    }
+
+    function advanceCard() {
+        const inner = document.getElementById('card-inner');
+        inner.onclick = null;
+        inner.style.pointerEvents = 'none';
+
+        // הפנה חזרה (אנימציה קצרה)
+        inner.classList.remove('flipped');
+        cardFlipped = false;
+
+        // אחרי שהאנימציה חזרה — טען קלף חדש מיד ללא כפתור
+        setTimeout(() => {
+            const concepts = getNextConcepts(8); // ערבוב מחדש אוטומטי אם צריך
+            cardNumber++;
+            populateCardFace(concepts, cardNumber);
+            updateCardCounter();
+
+            // הפוך מיד לפנים
+            requestAnimationFrame(() => {
+                inner.classList.add('flipped');
+                cardFlipped = true;
+                inner.style.pointerEvents = 'auto';
+                inner.onclick = advanceCard;
+                document.getElementById('player-hint').textContent = 'לחצו על הקלף לקלף הבא';
+            });
+        }, 380); // ממתין לסיום אנימציית ה-flip חזרה (0.35s בCSS)
+    }
+
+    function getNextConcepts(n) {
+        // אם נותרו פחות מ-n מושגים — ערבב מחדש לפני החילוץ
+        if (conceptDeck.length - deckPointer < n) {
+            reshuffleDeck(); // מאפס deckPointer=0 + ערבוב
+        }
+        const slice = conceptDeck.slice(deckPointer, deckPointer + n);
+        deckPointer += slice.length;
+        return slice;
+    }
+
+    function reshuffleDeck() {
+        conceptDeck = shuffle(conceptDeck);
+        deckPointer = 0;
+        showToast('🔄 המאגר הסתיים — מתחיל סיבוב חדש!');
+    }
+
+    function populateCardFace(concepts, num) {
+        document.getElementById('card-num-display').textContent = `קלף ${num}`;
+        const container = document.getElementById('card-concepts');
+        container.innerHTML = '';
+        concepts.forEach((word, i) => {
+            const row = document.createElement('div');
+            row.className = 'concept-row';
+            row.innerHTML = `<span class="concept-num">${i + 1}</span>
+                             <span class="concept-text">${word}</span>`;
+            container.appendChild(row);
+        });
+    }
+
+    function updateCardCounter() {
+        const remaining = conceptDeck.length - deckPointer;
+        document.getElementById('card-counter').textContent =
+            `${remaining} מושגים נותרו`;
+    }
+
+    // ─────────────────────────────────────────────
+    // בניית הלוח
+    // ─────────────────────────────────────────────
+    function generateSpiralWaypoints(cfg) {
+        const { MARGIN, RING_GAP, NUM_RINGS, END_X, END_Y } = cfg;
+        const wp = [];
+        for (let r = 0; r < NUM_RINGS; r++) {
+            const L = MARGIN + r * RING_GAP;
+            const R = 100 - MARGIN - r * RING_GAP;
+            const T = MARGIN + r * RING_GAP;
+            const B = 100 - MARGIN - r * RING_GAP;
+            if (r === 0) wp.push({ x: L, y: T });
+            wp.push({ x: R, y: T });
+            wp.push({ x: R, y: B });
+            wp.push({ x: L, y: B });
+            if (r < NUM_RINGS - 1) {
+                const nextT = MARGIN + (r + 1) * RING_GAP;
+                wp.push({ x: L, y: nextT });
+            }
+        }
+        const innerL = MARGIN + (NUM_RINGS - 1) * RING_GAP;
+        const innerT = MARGIN + (NUM_RINGS - 1) * RING_GAP;
+        const innerB = 100 - MARGIN - (NUM_RINGS - 1) * RING_GAP;
+        wp.push({ x: innerL, y: (innerT + innerB) / 2 });
+        wp.push({ x: END_X, y: END_Y });
+        return wp;
+    }
+
+    /**
+     * generateEquidistantPoints
+     * מרחקים אוקלידיים מחושבים במרחב הפיקסלים האמיתי של הלוח (boardW × boardH),
+     * כך שצלעות אופקיות ואנכיות מכילות מספר שווה של משבצות ביחס לאורכן בפיקסלים.
+     *
+     * @param {Array<{x,y}>} points  - נקודות ציון (ב-%)
+     * @param {number}       steps   - מספר נקודות תוצאה
+     * @param {number}       boardW  - רוחב הלוח בפיקסלים
+     * @param {number}       boardH  - גובה הלוח בפיקסלים
+     */
+    function generateEquidistantPoints(points, steps, boardW, boardH) {
+        // המרה ל-px לצורך חישוב מרחקים אמיתיים
+        const toPx = p => ({ px: p.x / 100 * boardW, py: p.y / 100 * boardH });
+
+        const lengths = [];
+        let totalLength = 0;
+        for (let i = 0; i < points.length - 1; i++) {
+            const a = toPx(points[i]);
+            const b = toPx(points[i + 1]);
+            const dx = b.px - a.px, dy = b.py - a.py;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            lengths.push(dist);
+            totalLength += dist;
+        }
+
+        const stepSize = totalLength / (steps - 1);
+        const result = [{ x: points[0].x, y: points[0].y }];
+        let accumDist = 0, seg = 0;
+
+        for (let i = 1; i < steps; i++) {
+            const target = i * stepSize;
+            while (seg < lengths.length - 1 && accumDist + lengths[seg] < target) {
+                accumDist += lengths[seg];
+                seg++;
+            }
+            const ratio = (target - accumDist) / lengths[seg];
+            // אינטרפולציה ב-% (מיקום על המסך)
+            result.push({
+                x: points[seg].x + (points[seg + 1].x - points[seg].x) * ratio,
+                y: points[seg].y + (points[seg + 1].y - points[seg].y) * ratio,
+            });
+        }
+        return result;
+    }
+
+    function buildBoard() {
+        const board = document.getElementById('board');
+        const boardW = board.clientWidth;
+        const boardH = board.clientHeight;
+
+        Array.from(board.children).forEach(c => {
+            if (c.classList.contains('step') || c.classList.contains('player-token')) c.remove();
+        });
+
+        const waypoints = generateSpiralWaypoints(BOARD_CONFIG);
+        coords = generateEquidistantPoints(waypoints, BOARD_CONFIG.TOTAL_STEPS, boardW, boardH);
+
+        // צעדים אדומים — חישוב דינמי לפי interval
+        const redSteps = new Set();
+        for (let idx = BOARD_CONFIG.RED_STEP_INTERVAL; idx < coords.length - 1; idx += BOARD_CONFIG.RED_STEP_INTERVAL) {
+            redSteps.add(idx);
+        }
+
+        let displayNum = 1;
+        coords.forEach((pos, index) => {
+            const el = document.createElement('div');
+            el.className = 'step';
+            el.style.left = pos.x + '%';
+            el.style.top  = pos.y + '%';
+
+            if (index === 0) {
+                el.classList.add('step-start');
+                el.innerHTML = '<svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>';
+            } else if (index === coords.length - 1) {
+                el.classList.add('step-end');
+                el.innerHTML = '<svg viewBox="0 0 24 24"><path d="M20.2 2H3.8C2.8 2 2 2.8 2 3.8v1.4c0 3.2 2.2 5.9 5.2 6.6.6 2.8 2.8 5 5.5 5.6V20H9v2h6v-2h-3.7v-2.6c2.8-.6 4.9-2.8 5.5-5.6 3-.7 5.2-3.4 5.2-6.6V3.8c0-1-.8-1.8-1.8-1.8zM7 5h2v6H7V5zm10 6h-2V5h2v6z"/></svg>';
+            } else {
+                el.innerText = displayNum;
+                if (redSteps.has(index)) el.classList.add('step-red');
+                displayNum = displayNum < 8 ? displayNum + 1 : 1;
+            }
+
+            el.onclick = () => handleMove(index);
+            board.appendChild(el);
+        });
+    }
+
+    // ─────────────────────────────────────────────
+    // משחקיות — לוח
+    // ─────────────────────────────────────────────
+    function renderPlayers() {
+        const board = document.getElementById('board');
+        players.forEach((p, idx) => {
+            let token = document.getElementById(`p-token-${idx}`);
+            if (!token) {
+                token = document.createElement('div');
+                token.id = `p-token-${idx}`;
+                token.className = `player-token ${colors[idx].class}`;
+                board.appendChild(token);
+            }
+            const pos = coords[p.pos];
+            let ox = 0, oy = 0;
+            const same = players.filter(pl => pl.pos === p.pos);
+            if (same.length > 1) {
+                const si = same.findIndex(pl => pl.id === p.id);
+                const angle = (2 * Math.PI / same.length) * si;
+                ox = Math.cos(angle) * 1.8;
+                oy = Math.sin(angle) * 1.8;
+            }
+            token.style.left = (pos.x + ox) + '%';
+            token.style.top  = (pos.y + oy) + '%';
+        });
+    }
+
+    function handleMove(targetIndex) {
+        historyStack.push({ playerIndex: currentPlayerIndex, prevPos: players[currentPlayerIndex].pos });
+        players[currentPlayerIndex].pos = targetIndex;
+        renderPlayers();
+        if (targetIndex === coords.length - 1) {
+            const w = colors[currentPlayerIndex];
+            document.getElementById('winner-name').innerText = `קבוצת ${w.name} ניצחה!`;
+            document.getElementById('winner-name').style.color = w.hex;
+            document.getElementById('victory-modal').style.display = 'flex';
+        }
+        currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+        updateUI();
+        resetTimer();
+    }
+
+    function undoLastMove() {
+        if (!historyStack.length) { showToast('⚠️ אין מהלך קודם לביטול'); return; }
+        const last = historyStack.pop();
+        currentPlayerIndex = last.playerIndex;
+        players[currentPlayerIndex].pos = last.prevPos;
+        renderPlayers();
+        updateUI();
+        resetTimer();
+        showToast('↩️ המהלך בוטל');
+    }
+
+    function updateUI() {
+        const c = colors[currentPlayerIndex];
+        document.getElementById('turn-text').innerText = c.name;
+        document.getElementById('turn-text').style.color = c.hex;
+        document.getElementById('turn-dot').style.background = c.hex;
+    }
+
+    function closeVictory() { document.getElementById('victory-modal').style.display = 'none'; }
+
+    // ─────────────────────────────────────────────
+    // טיימר
+    // ─────────────────────────────────────────────
+    function toggleTimer() {
+        const hIcon = document.getElementById('hourglass');
+        const tDisp = document.getElementById('timer-display');
+        if (isTimerRunning) {
+            clearInterval(timerInterval);
+            isTimerRunning = false;
+            hIcon.classList.remove('spinning');
+            tDisp.style.opacity = '0.5';
+        } else {
+            isTimerRunning = true;
+            hIcon.classList.add('spinning');
+            tDisp.style.opacity = '1';
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    isTimerRunning = false;
+                    hIcon.classList.remove('spinning');
+                    showTimerAlert();
+                }
+            }, 1000);
+        }
+    }
+
+    function resetTimer() {
+        clearInterval(timerInterval);
+        isTimerRunning = false;
+        timeLeft = 60;
+        document.getElementById('hourglass').classList.remove('spinning');
+        updateTimerDisplay();
+        document.getElementById('timer-display').style.opacity = '1';
+    }
+
+    function updateTimerDisplay() {
+        const m = Math.floor(timeLeft / 60), s = timeLeft % 60;
+        document.getElementById('timer-display').innerText = `0${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    function showTimerAlert() {
+        const el = document.getElementById('timer-alert');
+        el.style.animation = 'alertFadeIn 0.35s ease-out';
+        el.style.display = 'flex';
+    }
+
+    function dismissTimerAlert() {
+        const el = document.getElementById('timer-alert');
+        el.style.transition = 'opacity 0.3s';
+        el.style.opacity = '0';
+        setTimeout(() => {
+            el.style.display = 'none';
+            el.style.opacity = '';
+            el.style.transition = '';
+            resetTimer(); // ← איפוס ל-01:00 לאחר סגירת ה-overlay
+        }, 300);
+    }
+
+    // ─────────────────────────────────────────────
+    // Toast
+    // ─────────────────────────────────────────────
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.classList.add('show');
+        if (toastTimeout) clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    // ─────────────────────────────────────────────
+    // כלי עזר
+    // ─────────────────────────────────────────────
+    function shuffle(arr) {
+        const a = [...arr];
+        for (let i = a.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [a[i], a[j]] = [a[j], a[i]];
+        }
+        return a;
+    }
+</script>
+</body>
+</html>
