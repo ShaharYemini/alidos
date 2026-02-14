@@ -448,6 +448,95 @@
         .instruction-list li { margin-bottom: 8px; }
 
         /* ══════════════════════════════════════════
+           מודאל הגדרות מתקדמות
+        ══════════════════════════════════════════ */
+        #settings-modal .modal-card {
+            max-width: 480px;
+            text-align: right;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .settings-title {
+            font-size: 1.35rem; font-weight: 800;
+            color: var(--board-red); margin: 0 0 2px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .settings-subtitle {
+            font-size: 0.82rem; color: #aaa;
+            margin-bottom: 16px;
+        }
+        .settings-section {
+            background: #f8f8f8; border-radius: 14px;
+            padding: 14px 16px; margin-bottom: 12px;
+        }
+        .settings-section-label {
+            font-size: 0.72rem; font-weight: 700;
+            color: #bbb; letter-spacing: 1.2px;
+            text-transform: uppercase; margin-bottom: 10px;
+        }
+        .settings-row {
+            display: flex; align-items: center;
+            justify-content: space-between;
+            padding: 7px 0;
+            border-bottom: 1px solid #eee;
+            gap: 12px;
+        }
+        .settings-row:last-child { border-bottom: none; }
+        .settings-row-label {
+            display: flex; flex-direction: column; flex: 1;
+        }
+        .settings-row-label span {
+            font-size: 0.92rem; font-weight: 600; color: #333;
+        }
+        .settings-row-label small {
+            font-size: 0.73rem; color: #aaa; margin-top: 1px;
+        }
+        .settings-row input[type="number"] {
+            width: 72px; padding: 7px 10px;
+            font-size: 1rem; font-weight: 700; text-align: center;
+            border: 1.5px solid #ddd; border-radius: 10px;
+            background: white; color: #333;
+            -moz-appearance: textfield;
+        }
+        .settings-row input[type="number"]::-webkit-inner-spin-button,
+        .settings-row input[type="number"]::-webkit-outer-spin-button { opacity: 1; }
+        .settings-row input[type="number"]:focus {
+            outline: none; border-color: var(--board-red);
+        }
+        .settings-row input[type="range"] {
+            flex: 1; accent-color: var(--board-red);
+            cursor: pointer;
+        }
+        .settings-range-val {
+            font-size: 0.95rem; font-weight: 700;
+            color: var(--board-red); min-width: 28px;
+            text-align: center;
+        }
+        .settings-reset-row {
+            display: flex; justify-content: space-between;
+            align-items: center; margin-top: 8px; gap: 8px;
+        }
+        .settings-reset-btn {
+            background: none; border: 1.5px solid #ddd;
+            color: #999; border-radius: 50px;
+            padding: 7px 20px; font-size: 0.88rem;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .settings-reset-btn:hover {
+            border-color: var(--board-red); color: var(--board-red);
+            background: #fff5f5;
+        }
+        .settings-apply-btn {
+            background: var(--board-red); color: white;
+            border: none; border-radius: 50px;
+            padding: 8px 24px; font-size: 0.95rem;
+            font-weight: 700; cursor: pointer;
+            box-shadow: 0 3px 10px rgba(211,47,47,0.3);
+            transition: transform 0.15s, opacity 0.15s;
+        }
+        .settings-apply-btn:active { transform: scale(0.95); }
+
+        /* ══════════════════════════════════════════
            התראת סיום טיימר
         ══════════════════════════════════════════ */
         #timer-alert {
@@ -574,6 +663,7 @@
             <button class="btn-icon" onclick="backToMenu()">🏠</button>
             <button class="btn-icon" onclick="showInstructions()">❓</button>
             <button class="btn-icon" onclick="undoLastMove()">↩️</button>
+            <button class="btn-icon" onclick="openSettings()" title="הגדרות מתקדמות">⚙️</button>
         </div>
         <div class="turn-display">
             <div id="turn-dot" class="turn-dot" style="background:gold;"></div>
@@ -684,6 +774,116 @@
     </div>
 </div>
 
+<!-- מודאל הגדרות מתקדמות -->
+<div id="settings-modal" class="modal-overlay">
+    <div class="modal-card">
+        <button class="close-btn" onclick="closeSettings()">✕</button>
+
+        <div class="settings-title">⚙️ הגדרות מתקדמות</div>
+        <div class="settings-subtitle">שינויים יחולו על הלוח הנוכחי מיד</div>
+
+        <!-- אלגוריתם הלוח -->
+        <div class="settings-section">
+            <div class="settings-section-label">🗺️ אלגוריתם הלוח</div>
+
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <span>מספר תאים כולל</span>
+                    <small>TOTAL_STEPS — מספר המשבצות בלוח כולל התחלה וסיום</small>
+                </div>
+                <input type="number" id="cfg-total-steps" min="20" max="100" value="40"
+                    oninput="livePreviewConfig()">
+            </div>
+
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <span>מרווח בין טבעות</span>
+                    <small>RING_GAP — מרחק (%) בין כל טבעת סליל</small>
+                </div>
+                <input type="number" id="cfg-ring-gap" min="8" max="30" value="17"
+                    oninput="livePreviewConfig()">
+            </div>
+
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <span>מספר טבעות</span>
+                    <small>NUM_RINGS — כמה סיבובי סליל בלוח</small>
+                </div>
+                <input type="number" id="cfg-num-rings" min="1" max="4" value="2"
+                    oninput="livePreviewConfig()">
+            </div>
+
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <span>שוליים חיצוניים</span>
+                    <small>MARGIN — ריווח (%) מקצות הלוח לטבעת הראשונה</small>
+                </div>
+                <input type="number" id="cfg-margin" min="3" max="20" value="10"
+                    oninput="livePreviewConfig()">
+            </div>
+        </div>
+
+        <!-- תאים אדומים -->
+        <div class="settings-section">
+            <div class="settings-section-label">🔴 תאים אדומים</div>
+
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <span>מרחק בין תאים אדומים</span>
+                    <small>RED_STEP_INTERVAL — כל כמה תאים מופיע תא אדום</small>
+                </div>
+                <input type="range" id="cfg-red-interval-range" min="3" max="15" value="7"
+                    oninput="syncRedInterval(this.value)">
+                <span class="settings-range-val" id="cfg-red-interval-val">7</span>
+            </div>
+        </div>
+
+        <!-- מיקום נקודת הסיום -->
+        <div class="settings-section">
+            <div class="settings-section-label">🏆 מיקום נקודת סיום</div>
+
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <span>מיקום X של הסיום</span>
+                    <small>END_X — אחוז מהשמאל (0–100)</small>
+                </div>
+                <input type="range" id="cfg-end-x-range" min="20" max="80" value="33"
+                    oninput="syncEndX(this.value)">
+                <span class="settings-range-val" id="cfg-end-x-val">33</span>
+            </div>
+
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <span>מיקום Y של הסיום</span>
+                    <small>END_Y — אחוז מלמעלה (0–100)</small>
+                </div>
+                <input type="range" id="cfg-end-y-range" min="20" max="80" value="50"
+                    oninput="syncEndY(this.value)">
+                <span class="settings-range-val" id="cfg-end-y-val">50</span>
+            </div>
+        </div>
+
+        <!-- טיימר -->
+        <div class="settings-section">
+            <div class="settings-section-label">⏱️ טיימר</div>
+
+            <div class="settings-row">
+                <div class="settings-row-label">
+                    <span>זמן לכל תור (שניות)</span>
+                    <small>משפיע על כל תור חדש מכאן והלאה</small>
+                </div>
+                <input type="number" id="cfg-timer-duration" min="15" max="300" value="60"
+                    oninput="livePreviewConfig()">
+            </div>
+        </div>
+
+        <div class="settings-reset-row">
+            <button class="settings-reset-btn" onclick="resetSettingsToDefault()">↺ ברירות מחדל</button>
+            <button class="settings-apply-btn" onclick="applySettings()">✓ החל שינויים</button>
+        </div>
+    </div>
+</div>
+
 <!-- ══════════════════════════════════════════════
      JavaScript
 ══════════════════════════════════════════════ -->
@@ -696,7 +896,7 @@
         RING_GAP: 17,
         NUM_RINGS: 2,
         TOTAL_STEPS: 40,
-        RED_STEP_INTERVAL: 8,
+        RED_STEP_INTERVAL: 7,
         END_X: 33,
         END_Y: 50,
     };
@@ -728,6 +928,7 @@
     ];
     let players = [], currentPlayerIndex = 0, coords = [], historyStack = [];
     let timerInterval, timeLeft = 60, isTimerRunning = false;
+    let _timerDuration = 60; // משך הטיימר הנוכחי (ניתן לשינוי דרך הגדרות)
     let toastTimeout = null;
 
     // ─────────────────────────────────────────────
@@ -848,6 +1049,7 @@
         // סגור מודאלים פתוחים
         closeVictory();
         closeInstructions();
+        closeSettings();
     }
 
     function showInstructions() { document.getElementById('instructions-modal').style.display = 'flex'; }
@@ -1219,7 +1421,7 @@
     function resetTimer() {
         clearInterval(timerInterval);
         isTimerRunning = false;
-        timeLeft = 60;
+        timeLeft = _timerDuration;
         document.getElementById('hourglass').classList.remove('spinning');
         updateTimerDisplay();
         document.getElementById('timer-display').style.opacity = '1';
@@ -1257,6 +1459,107 @@
         t.classList.add('show');
         if (toastTimeout) clearTimeout(toastTimeout);
         toastTimeout = setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    // ─────────────────────────────────────────────
+    // הגדרות מתקדמות
+    // ─────────────────────────────────────────────
+    const DEFAULT_CONFIG = {
+        MARGIN: 10, RING_GAP: 17, NUM_RINGS: 2,
+        TOTAL_STEPS: 40, RED_STEP_INTERVAL: 7,
+        END_X: 33, END_Y: 50,
+    };
+    const DEFAULT_TIMER = 60;
+
+    function openSettings() {
+        // סנכרן שדות עם BOARD_CONFIG הנוכחי
+        document.getElementById('cfg-total-steps').value     = BOARD_CONFIG.TOTAL_STEPS;
+        document.getElementById('cfg-ring-gap').value        = BOARD_CONFIG.RING_GAP;
+        document.getElementById('cfg-num-rings').value       = BOARD_CONFIG.NUM_RINGS;
+        document.getElementById('cfg-margin').value          = BOARD_CONFIG.MARGIN;
+        document.getElementById('cfg-red-interval-range').value = BOARD_CONFIG.RED_STEP_INTERVAL;
+        document.getElementById('cfg-red-interval-val').textContent = BOARD_CONFIG.RED_STEP_INTERVAL;
+        document.getElementById('cfg-end-x-range').value    = BOARD_CONFIG.END_X;
+        document.getElementById('cfg-end-x-val').textContent = BOARD_CONFIG.END_X;
+        document.getElementById('cfg-end-y-range').value    = BOARD_CONFIG.END_Y;
+        document.getElementById('cfg-end-y-val').textContent = BOARD_CONFIG.END_Y;
+        document.getElementById('cfg-timer-duration').value = _timerDuration;
+        document.getElementById('settings-modal').style.display = 'flex';
+    }
+
+    function closeSettings() {
+        document.getElementById('settings-modal').style.display = 'none';
+    }
+
+    function syncRedInterval(val) {
+        document.getElementById('cfg-red-interval-val').textContent = val;
+    }
+    function syncEndX(val) {
+        document.getElementById('cfg-end-x-val').textContent = val;
+    }
+    function syncEndY(val) {
+        document.getElementById('cfg-end-y-val').textContent = val;
+    }
+
+    function livePreviewConfig() { /* placeholder for future live preview */ }
+
+    function applySettings() {
+        const totalSteps  = parseInt(document.getElementById('cfg-total-steps').value) || DEFAULT_CONFIG.TOTAL_STEPS;
+        const ringGap     = parseInt(document.getElementById('cfg-ring-gap').value)    || DEFAULT_CONFIG.RING_GAP;
+        const numRings    = parseInt(document.getElementById('cfg-num-rings').value)   || DEFAULT_CONFIG.NUM_RINGS;
+        const margin      = parseInt(document.getElementById('cfg-margin').value)      || DEFAULT_CONFIG.MARGIN;
+        const redInterval = parseInt(document.getElementById('cfg-red-interval-range').value) || DEFAULT_CONFIG.RED_STEP_INTERVAL;
+        const endX        = parseInt(document.getElementById('cfg-end-x-range').value) || DEFAULT_CONFIG.END_X;
+        const endY        = parseInt(document.getElementById('cfg-end-y-range').value) || DEFAULT_CONFIG.END_Y;
+        const timerSecs   = parseInt(document.getElementById('cfg-timer-duration').value) || DEFAULT_TIMER;
+
+        // ולידציות בסיסיות
+        if (totalSteps < 20 || totalSteps > 100) { showToast('❌ מספר תאים: 20–100'); return; }
+        if (ringGap < 8 || ringGap > 30)          { showToast('❌ מרווח טבעות: 8–30'); return; }
+        if (numRings < 1 || numRings > 4)          { showToast('❌ מספר טבעות: 1–4'); return; }
+        if (margin < 3 || margin > 20)             { showToast('❌ שוליים: 3–20'); return; }
+        if (timerSecs < 15 || timerSecs > 300)     { showToast('❌ טיימר: 15–300 שניות'); return; }
+
+        // עדכן BOARD_CONFIG
+        BOARD_CONFIG.TOTAL_STEPS       = totalSteps;
+        BOARD_CONFIG.RING_GAP          = ringGap;
+        BOARD_CONFIG.NUM_RINGS         = numRings;
+        BOARD_CONFIG.MARGIN            = margin;
+        BOARD_CONFIG.RED_STEP_INTERVAL = redInterval;
+        BOARD_CONFIG.END_X             = endX;
+        BOARD_CONFIG.END_Y             = endY;
+
+        // עדכן טיימר
+        resetTimer();
+        timeLeft = timerSecs;
+        // עדכן את פונקציית resetTimer לזכור את ערך החדש
+        _timerDuration = timerSecs;
+        updateTimerDisplay();
+
+        // בנה מחדש את הלוח
+        historyStack = [];
+        players.forEach(p => p.pos = 0);
+        buildBoard();
+        renderPlayers();
+        updateUI();
+
+        closeSettings();
+        showToast('✅ ההגדרות הוחלו — הלוח נבנה מחדש');
+    }
+
+    function resetSettingsToDefault() {
+        document.getElementById('cfg-total-steps').value        = DEFAULT_CONFIG.TOTAL_STEPS;
+        document.getElementById('cfg-ring-gap').value           = DEFAULT_CONFIG.RING_GAP;
+        document.getElementById('cfg-num-rings').value          = DEFAULT_CONFIG.NUM_RINGS;
+        document.getElementById('cfg-margin').value             = DEFAULT_CONFIG.MARGIN;
+        document.getElementById('cfg-red-interval-range').value = DEFAULT_CONFIG.RED_STEP_INTERVAL;
+        document.getElementById('cfg-red-interval-val').textContent = DEFAULT_CONFIG.RED_STEP_INTERVAL;
+        document.getElementById('cfg-end-x-range').value        = DEFAULT_CONFIG.END_X;
+        document.getElementById('cfg-end-x-val').textContent    = DEFAULT_CONFIG.END_X;
+        document.getElementById('cfg-end-y-range').value        = DEFAULT_CONFIG.END_Y;
+        document.getElementById('cfg-end-y-val').textContent    = DEFAULT_CONFIG.END_Y;
+        document.getElementById('cfg-timer-duration').value     = DEFAULT_TIMER;
+        showToast('↺ ברירות המחדל שוחזרו');
     }
 
     // ─────────────────────────────────────────────
